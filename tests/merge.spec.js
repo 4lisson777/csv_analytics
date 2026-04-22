@@ -12,6 +12,11 @@ const { mergeFiles, getColumnValues } = require('./helpers');
 //  P007: 40               (only file2)
 //  P008: 10  + 10  = 20   (in both, identical)
 // Total: 8 unique rows
+//
+// Output columns for a summed column `total_quantity`:
+//   total_quantity_1  — value from file 1 (blank if row absent)
+//   total_quantity_2  — value from file 2 (blank if row absent)
+//   total_quantity_sum — numeric sum (file1 + file2, treating blank as 0)
 
 test.describe('Merge', () => {
   test.beforeEach(async ({ page }) => {
@@ -54,32 +59,41 @@ test.describe('Merge', () => {
   });
 
   // ── Merged values ─────────────────────────────────────────────────
-  test('P001 total_quantity is summed to 150', async ({ page }) => {
-    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity');
+  test('P001 total_quantity_sum is 150', async ({ page }) => {
+    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
     const ids    = await getColumnValues(page, '#resultsTbl', 'product_id');
     const idx    = ids.indexOf('P001');
     expect(values[idx]).toBe('150');
   });
 
-  test('P002 total_quantity is summed to 75', async ({ page }) => {
-    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity');
+  test('P002 total_quantity_sum is 75', async ({ page }) => {
+    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
     const ids    = await getColumnValues(page, '#resultsTbl', 'product_id');
     const idx    = ids.indexOf('P002');
     expect(values[idx]).toBe('75');
   });
 
-  test('P005 total_quantity is summed to 45', async ({ page }) => {
-    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity');
+  test('P005 total_quantity_sum is 45', async ({ page }) => {
+    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
     const ids    = await getColumnValues(page, '#resultsTbl', 'product_id');
     const idx    = ids.indexOf('P005');
     expect(values[idx]).toBe('45');
   });
 
-  test('P008 total_quantity is summed to 20 (same key in both files)', async ({ page }) => {
-    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity');
+  test('P008 total_quantity_sum is 20 (same key in both files)', async ({ page }) => {
+    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
     const ids    = await getColumnValues(page, '#resultsTbl', 'product_id');
     const idx    = ids.indexOf('P008');
     expect(values[idx]).toBe('20');
+  });
+
+  test('P001 shows per-file values (100 and 50)', async ({ page }) => {
+    const ids = await getColumnValues(page, '#resultsTbl', 'product_id');
+    const v1  = await getColumnValues(page, '#resultsTbl', 'total_quantity_1');
+    const v2  = await getColumnValues(page, '#resultsTbl', 'total_quantity_2');
+    const idx = ids.indexOf('P001');
+    expect(v1[idx]).toBe('100');
+    expect(v2[idx]).toBe('50');
   });
 
   test('P003 is preserved from file 1 only', async ({ page }) => {
@@ -92,11 +106,26 @@ test.describe('Merge', () => {
     expect(ids).toContain('P007');
   });
 
-  test('P003 total_quantity unchanged at 200 (only in file 1)', async ({ page }) => {
-    const values = await getColumnValues(page, '#resultsTbl', 'total_quantity');
-    const ids    = await getColumnValues(page, '#resultsTbl', 'product_id');
-    const idx    = ids.indexOf('P003');
-    expect(values[idx]).toBe('200');
+  test('P003 only-file1 row: _1=200, _2 blank, _sum=200', async ({ page }) => {
+    const ids = await getColumnValues(page, '#resultsTbl', 'product_id');
+    const v1  = await getColumnValues(page, '#resultsTbl', 'total_quantity_1');
+    const v2  = await getColumnValues(page, '#resultsTbl', 'total_quantity_2');
+    const vs  = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
+    const idx = ids.indexOf('P003');
+    expect(v1[idx]).toBe('200');
+    expect(v2[idx]).toBe('');
+    expect(vs[idx]).toBe('200');
+  });
+
+  test('P007 only-file2 row: _1 blank, _2=40, _sum=40', async ({ page }) => {
+    const ids = await getColumnValues(page, '#resultsTbl', 'product_id');
+    const v1  = await getColumnValues(page, '#resultsTbl', 'total_quantity_1');
+    const v2  = await getColumnValues(page, '#resultsTbl', 'total_quantity_2');
+    const vs  = await getColumnValues(page, '#resultsTbl', 'total_quantity_sum');
+    const idx = ids.indexOf('P007');
+    expect(v1[idx]).toBe('');
+    expect(v2[idx]).toBe('40');
+    expect(vs[idx]).toBe('40');
   });
 
   test('P001 product_name kept from file 1', async ({ page }) => {
@@ -107,11 +136,19 @@ test.describe('Merge', () => {
   });
 
   // ── Column completeness ───────────────────────────────────────────
-  test('result table contains all expected columns', async ({ page }) => {
+  test('result table replaces sum col with _1/_2/_sum triple', async ({ page }) => {
     const headers = await page.locator('#resultsTbl thead th').allTextContents();
     expect(headers).toEqual(
-      expect.arrayContaining(['product_id', 'product_name', 'total_quantity', 'price']),
+      expect.arrayContaining([
+        'product_id',
+        'product_name',
+        'total_quantity_1',
+        'total_quantity_2',
+        'total_quantity_sum',
+        'price',
+      ]),
     );
+    expect(headers).not.toContain('total_quantity');
   });
 
   test('no duplicate product_id rows in result', async ({ page }) => {

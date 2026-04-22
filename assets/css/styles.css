@@ -154,6 +154,30 @@ select:focus {
 }
 select:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.checkbox-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  padding: 0.55rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 7px;
+  background: #fff;
+  min-height: 2.5rem;
+  align-items: center;
+}
+.checkbox-list.disabled { opacity: 0.5; }
+.checkbox-list .hint    { font-size: 0.88rem; color: #888; }
+
+.checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-item input { cursor: pointer; }
+
 /* ── Buttons ─────────────────────────────────────────── */
 .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 

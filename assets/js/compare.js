@@ -1,8 +1,10 @@
 import { state } from './state.js';
 import { $, allFields, buildTable, showResults } from './utils.js';
+import { getSumCols } from './controls.js';
 
 export function compareCSVs() {
-  const keyCol = $('keyCol').value;
+  const keyCol    = $('keyCol').value;
+  const deltaCols = getSumCols();
   if (!keyCol) { alert('Selecione a coluna-chave.'); return; }
 
   const map1    = new Map(state.data1.map(r => [String(r[keyCol] ?? ''), r]));
@@ -10,23 +12,37 @@ export function compareCSVs() {
   const allKeys = new Set([...map1.keys(), ...map2.keys()]);
   const cols    = allFields(state.data1, state.data2);
 
+  const deltaSet = new Set(deltaCols);
+
   let c1 = 0, c2 = 0, cdiff = 0, csame = 0;
   const rows = [];
+
+  const addDeltas = (row, r1, r2) => {
+    deltaCols.forEach(dc => {
+      row[`Δ ${dc}`] = (r1 && r2) ? formatDelta(r1[dc], r2[dc]) : '';
+    });
+  };
 
   allKeys.forEach(key => {
     const r1 = map1.get(key);
     const r2 = map2.get(key);
 
     if (r1 && !r2) {
-      rows.push({ _cls: 'only-file1', _status: 'Apenas Arquivo 1', ...r1 });
+      const row = { _cls: 'only-file1', _status: 'Apenas Arquivo 1', ...r1 };
+      addDeltas(row, r1, null);
+      rows.push(row);
       c1++;
     } else if (!r1 && r2) {
-      rows.push({ _cls: 'only-file2', _status: 'Apenas Arquivo 2', ...r2 });
+      const row = { _cls: 'only-file2', _status: 'Apenas Arquivo 2', ...r2 };
+      addDeltas(row, null, r2);
+      rows.push(row);
       c2++;
     } else {
       const identical = cols.every(c => String(r1[c] ?? '') === String(r2[c] ?? ''));
       if (identical) {
-        rows.push({ _cls: 'identical', _status: 'Idêntico', ...r1 });
+        const row = { _cls: 'identical', _status: 'Idêntico', ...r1 };
+        addDeltas(row, r1, r2);
+        rows.push(row);
         csame++;
       } else {
         const merged = { _cls: 'diff-values', _status: 'Diferente' };
@@ -34,6 +50,7 @@ export function compareCSVs() {
           const v1 = String(r1[c] ?? ''), v2 = String(r2[c] ?? '');
           merged[c] = v1 === v2 ? v1 : `${v1} → ${v2}`;
         });
+        addDeltas(merged, r1, r2);
         rows.push(merged);
         cdiff++;
       }
@@ -76,7 +93,13 @@ export function compareCSVs() {
 
   $('resultsTitle').textContent = `🔍 Resultado da Comparação — ${rows.length} registros`;
 
-  const displayCols = [...cols, '_status'];
+  const displayCols = [];
+  cols.forEach(c => {
+    displayCols.push(c);
+    if (deltaSet.has(c)) displayCols.push(`Δ ${c}`);
+  });
+  displayCols.push('_status');
+
   $('resultsTbl').innerHTML = buildTable(
     displayCols.map(c => (c === '_status' ? 'Status' : c)),
     rows.map(r => {
@@ -88,4 +111,13 @@ export function compareCSVs() {
   );
 
   showResults();
+}
+
+function formatDelta(a, b) {
+  const n1 = parseFloat(a);
+  const n2 = parseFloat(b);
+  if (Number.isNaN(n1) || Number.isNaN(n2)) return '';
+  const d = n2 - n1;
+  if (d === 0) return '0';
+  return d > 0 ? `+${d}` : String(d);
 }

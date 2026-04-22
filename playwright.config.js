@@ -1,34 +1,37 @@
 // @ts-check
-const { defineConfig, devices } = require('@playwright/test');
+const { defineConfig, devices } = require("@playwright/test");
 
 module.exports = defineConfig({
-  testDir: './tests',
+  testDir: "./tests",
   timeout: 30_000,
   expect: { timeout: 8_000 },
   retries: 0,
   workers: 1,
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+  ],
 
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: "http://localhost:3001",
     headless: true,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'retain-on-failure',
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+    trace: "retain-on-failure",
   },
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "chrome",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 
   webServer: {
-    command: 'node server.js',
-    url: 'http://localhost:3001',
+    command: "node server.js",
+    url: "http://localhost:3001",
     reuseExistingServer: !process.env.CI,
-    stdout: 'ignore',
-    stderr: 'pipe',
+    stdout: "ignore",
+    stderr: "pipe",
   },
 });

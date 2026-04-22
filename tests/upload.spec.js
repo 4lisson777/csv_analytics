@@ -20,7 +20,7 @@ test.describe('Upload', () => {
 
   test('column selects are disabled before any upload', async ({ page }) => {
     await expect(page.locator('#keyCol')).toBeDisabled();
-    await expect(page.locator('#sumCol')).toBeDisabled();
+    await expect(page.locator('#sumCols')).toHaveClass(/disabled/);
   });
 
   test('results card is hidden on load', async ({ page }) => {
@@ -92,7 +92,8 @@ test.describe('Upload', () => {
   test('column selects enable after both files are uploaded', async ({ page }) => {
     await uploadBoth(page);
     await expect(page.locator('#keyCol')).toBeEnabled();
-    await expect(page.locator('#sumCol')).toBeEnabled();
+    await expect(page.locator('#sumCols')).not.toHaveClass(/disabled/);
+    await expect(page.locator('#sumCols input[type=checkbox]')).toHaveCount(4);
   });
 
   test('key column select contains all CSV headers', async ({ page }) => {
@@ -108,7 +109,9 @@ test.describe('Upload', () => {
 
   test('auto-selects sum column containing "quantity"', async ({ page }) => {
     await uploadBoth(page);
-    await expect(page.locator('#sumCol')).toHaveValue('total_quantity');
+    await expect(
+      page.locator('#sumCols input[type=checkbox][value="total_quantity"]'),
+    ).toBeChecked();
   });
 
   // ── Drag-over visual state ────────────────────────────────────────
