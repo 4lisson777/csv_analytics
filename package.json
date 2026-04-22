@@ -4,8 +4,12 @@
   "description": "Compare and merge CSV files",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
     "test": "playwright test",
     "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
   },
   "repository": {
     "type": "git",
