@@ -9,85 +9,150 @@
 </head>
 <body>
 
-<header>
-  <h1>📊 Manipulador de Arquivos CSV</h1>
-  <p>Faça upload de dois arquivos CSV para mesclar ou comparar seus dados</p>
-</header>
+<div class="csv-app">
 
-<div class="container">
+  <!-- ── Top bar ─────────────────────────────────────────────────── -->
+  <header class="app-topbar">
+    <div class="brand">
+      <svg viewBox="0 0 512 512" aria-hidden="true" fill="currentColor">
+        <path d="M256 0 L277 199 L461 96 L328 256 L461 416 L277 313 L256 512 L235 313 L51 416 L184 256 L51 96 L235 199 Z"/>
+      </svg>
+      <span class="title">Manipulador de Arquivos CSV</span>
+      <span class="sub">Faça upload de dois arquivos CSV para mesclar ou comparar</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="crumbs" id="crumbs">
+      <b id="crumb1">—</b> · arquivo&nbsp;1
+      <span class="sep">/</span>
+      <b id="crumb2">—</b> · arquivo&nbsp;2
+      <span class="sep">/</span>
+      <b id="crumbResult">—</b> · resultado
+    </div>
+  </header>
 
-  <!-- Upload -->
-  <div class="upload-grid">
+  <!-- ── Workbench: two upload slots ─────────────────────────────── -->
+  <section class="workbench" aria-label="Upload de arquivos">
 
-    <div class="card">
-      <div class="card-title">📄 Arquivo 1</div>
+    <div class="slot">
+      <div class="slot-head">
+        <span class="label">Arquivo 1</span>
+        <span class="name" id="slotName1"><span class="dim">sem arquivo</span></span>
+      </div>
       <div class="drop-zone" id="zone1">
-        <input type="file" id="input1" accept=".csv" />
-        <div class="drop-icon">📂</div>
-        <p class="drop-hint">
-          Arraste e solte um arquivo <strong>.csv</strong> aqui<br />
-          ou <strong>clique para selecionar</strong>
-        </p>
-        <p class="drop-filename" id="name1"></p>
-      </div>
-      <div class="preview-wrap" id="preview1">
-        <p class="preview-label">Prévia — primeiras 5 linhas</p>
-        <div class="tbl-wrap" id="prevTbl1"></div>
+        <input type="file" id="input1" accept=".csv,text/csv" />
+        <div class="drop-empty">
+          <div class="plus">+</div>
+          <div class="main">Arraste e solte um arquivo .csv aqui</div>
+          <div>ou clique para selecionar</div>
+          <span class="ext">.csv · utf-8</span>
+        </div>
+        <div class="drop-filled">
+          <div class="file-meta">
+            <span class="icon">csv</span>
+            <div class="info">
+              <div class="fname" id="name1"></div>
+              <div class="fstats" id="fstats1"></div>
+            </div>
+          </div>
+          <div id="preview1">
+            <div class="preview-wrap">
+              <span class="cap">Prévia — primeiras 5 linhas</span>
+            </div>
+            <div class="preview-table-scroll" id="prevTbl1"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">📄 Arquivo 2</div>
+    <div class="slot">
+      <div class="slot-head">
+        <span class="label">Arquivo 2</span>
+        <span class="name" id="slotName2"><span class="dim">sem arquivo</span></span>
+      </div>
       <div class="drop-zone" id="zone2">
-        <input type="file" id="input2" accept=".csv" />
-        <div class="drop-icon">📂</div>
-        <p class="drop-hint">
-          Arraste e solte um arquivo <strong>.csv</strong> aqui<br />
-          ou <strong>clique para selecionar</strong>
-        </p>
-        <p class="drop-filename" id="name2"></p>
-      </div>
-      <div class="preview-wrap" id="preview2">
-        <p class="preview-label">Prévia — primeiras 5 linhas</p>
-        <div class="tbl-wrap" id="prevTbl2"></div>
+        <input type="file" id="input2" accept=".csv,text/csv" />
+        <div class="drop-empty">
+          <div class="plus">+</div>
+          <div class="main">Arraste e solte um arquivo .csv aqui</div>
+          <div>ou clique para selecionar</div>
+          <span class="ext">.csv · utf-8</span>
+        </div>
+        <div class="drop-filled">
+          <div class="file-meta">
+            <span class="icon">csv</span>
+            <div class="info">
+              <div class="fname" id="name2"></div>
+              <div class="fstats" id="fstats2"></div>
+            </div>
+          </div>
+          <div id="preview2">
+            <div class="preview-wrap">
+              <span class="cap">Prévia — primeiras 5 linhas</span>
+            </div>
+            <div class="preview-table-scroll" id="prevTbl2"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-  </div>
+  </section>
 
-  <!-- Controls -->
-  <div class="card">
-    <div class="card-title">⚙️ Configurações de Operação</div>
-    <div class="controls-grid">
-      <div class="form-group">
-        <label for="keyCol">Coluna-chave (usada na mesclagem e comparação)</label>
+  <!-- ── Operation panel ─────────────────────────────────────────── -->
+  <section class="op-panel disabled" id="opPanel" aria-label="Configurações de Operação">
+    <div class="field">
+      <label for="keyCol">
+        Coluna-chave
+        <span class="hint">(mesclagem e comparação)</span>
+      </label>
+      <div class="select-wrap">
         <select id="keyCol" disabled>
-          <option value="">— Faça upload dos dois arquivos primeiro —</option>
+          <option value="">—</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="sumCol">Coluna numérica (valores somados na mesclagem)</label>
+    </div>
+    <div class="field">
+      <label for="sumCol">
+        Coluna numérica
+        <span class="hint">(somada na mesclagem)</span>
+      </label>
+      <div class="select-wrap">
         <select id="sumCol" disabled>
-          <option value="">— Faça upload dos dois arquivos primeiro —</option>
+          <option value="">—</option>
         </select>
       </div>
     </div>
-    <div class="btn-row">
-      <button class="btn btn-merge"   id="btnMerge"   disabled>🔀 Mesclar Arquivos</button>
-      <button class="btn btn-compare" id="btnCompare" disabled>🔍 Comparar Arquivos</button>
+    <div class="op-actions">
+      <button class="btn btn-secondary" id="btnCompare" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M12 3v18"/></svg>
+        Comparar Arquivos
+      </button>
+      <button class="btn btn-primary" id="btnMerge" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4a4 4 0 0 0 4 4h4"/><path d="M16 3v4a4 4 0 0 1-4 4H8"/><path d="M12 11v10"/></svg>
+        Mesclar Arquivos
+      </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Results -->
-  <div class="card" id="resultsCard">
-    <div class="results-header">
-      <div class="card-title" id="resultsTitle" style="margin-bottom:0">Resultado</div>
-      <button class="btn btn-download" id="btnDownload">⬇️ Baixar CSV</button>
+  <!-- ── Result ──────────────────────────────────────────────────── -->
+  <section class="result" id="resultsCard" aria-label="Resultado">
+    <div class="result-header">
+      <div class="title" id="resultsTitle">Resultado</div>
+      <div class="stats-bar" id="statsSection"></div>
+      <button class="dl" id="btnDownload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar CSV
+      </button>
     </div>
     <div id="legendSection"></div>
-    <div id="statsSection"></div>
-    <div class="tbl-wrap" id="resultsTbl"></div>
-  </div>
+    <div class="result-scroll" id="resultsTbl"></div>
+  </section>
+
+  <!-- ── Status bar ──────────────────────────────────────────────── -->
+  <footer class="statusbar">
+    <span><span class="dot" id="statusDot"></span><span id="statusText">Aguardando arquivos</span></span>
+    <span class="spacer"></span>
+    <span id="statusMeta" style="color: var(--fg-4);">client-side · papaparse</span>
+  </footer>
 
 </div>
 
