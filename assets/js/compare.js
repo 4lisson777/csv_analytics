@@ -1,6 +1,14 @@
 import { state } from './state.js';
-import { $, allFields, buildTable, showResults } from './utils.js';
+import { $, allFields, esc, showResults } from './utils.js';
 import { getSumCols } from './controls.js';
+import { updateStatusBar } from './upload.js';
+
+const CAT_META = {
+  'only-file1': { label: 'Apenas Arquivo 1', glyph: '◐', cls: 'cat-only1', badge: 'badge-green' },
+  'only-file2': { label: 'Apenas Arquivo 2', glyph: '◑', cls: 'cat-only2', badge: 'badge-blue'  },
+  'diff-values':{ label: 'Diferente',        glyph: '≠', cls: 'cat-diff',  badge: 'badge-yellow'},
+  'identical':  { label: 'Idêntico',         glyph: '=', cls: 'cat-same',  badge: 'badge-gray'  },
+};
 
 export function compareCSVs() {
   const keyCol    = $('keyCol').value;
@@ -13,9 +21,8 @@ export function compareCSVs() {
   const cols    = allFields(state.data1, state.data2);
 
   const deltaSet = new Set(deltaCols);
-
-  let c1 = 0, c2 = 0, cdiff = 0, csame = 0;
-  const rows = [];
+  const counts   = { 'only-file1': 0, 'only-file2': 0, 'diff-values': 0, 'identical': 0 };
+  const rows     = [];
 
   const addDeltas = (row, r1, r2) => {
     deltaCols.forEach(dc => {
@@ -31,28 +38,33 @@ export function compareCSVs() {
       const row = { _cls: 'only-file1', _status: 'Apenas Arquivo 1', ...r1 };
       addDeltas(row, r1, null);
       rows.push(row);
-      c1++;
+      counts['only-file1']++;
     } else if (!r1 && r2) {
       const row = { _cls: 'only-file2', _status: 'Apenas Arquivo 2', ...r2 };
       addDeltas(row, null, r2);
       rows.push(row);
-      c2++;
+      counts['only-file2']++;
     } else {
       const identical = cols.every(c => String(r1[c] ?? '') === String(r2[c] ?? ''));
       if (identical) {
         const row = { _cls: 'identical', _status: 'Idêntico', ...r1 };
         addDeltas(row, r1, r2);
         rows.push(row);
-        csame++;
+        counts['identical']++;
       } else {
-        const merged = { _cls: 'diff-values', _status: 'Diferente' };
+        const merged = { _cls: 'diff-values', _status: 'Diferente', _diffs: {} };
         cols.forEach(c => {
           const v1 = String(r1[c] ?? ''), v2 = String(r2[c] ?? '');
-          merged[c] = v1 === v2 ? v1 : `${v1} → ${v2}`;
+          if (v1 === v2) {
+            merged[c] = v1;
+          } else {
+            merged[c] = `${v1} → ${v2}`;
+            merged._diffs[c] = [v1, v2];
+          }
         });
         addDeltas(merged, r1, r2);
         rows.push(merged);
-        cdiff++;
+        counts['diff-values']++;
       }
     }
   });
@@ -63,54 +75,77 @@ export function compareCSVs() {
   state.resultRows = rows;
   state.resultMode = 'compare';
 
+  /* ---- Legend with category glyphs + badge counts ---- */
   $('legendSection').innerHTML = `
     <div class="legend">
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:#d4edda;border:1px solid #c3e6cb"></div>
-        Apenas no Arquivo 1
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:#cce5ff;border:1px solid #b8daff"></div>
-        Apenas no Arquivo 2
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:#fff3cd;border:1px solid #ffeeba"></div>
-        Valores diferentes
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:#fff;border:1px solid #ddd"></div>
-        Idênticos
-      </div>
-    </div>`;
+      ${['only-file1', 'only-file2', 'diff-values', 'identical'].map(cat => {
+        const m = CAT_META[cat];
+        return `
+          <div class="legend-item">
+            <span class="mark ${m.cls}" aria-hidden="true">${m.glyph}</span>
+            <span class="lbl">${esc(m.label)}</span>
+            <span class="badge ${m.badge}">${counts[cat]}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
 
+  /* ---- Stats: key column + totals ---- */
   $('statsSection').innerHTML = `
-    <div class="stats-bar">
-      <span class="badge badge-green">🟢 Apenas Arq. 1: ${c1}</span>
-      <span class="badge badge-blue">🔵 Apenas Arq. 2: ${c2}</span>
-      <span class="badge badge-yellow">🟡 Diferentes: ${cdiff}</span>
-      <span class="badge badge-gray">⚪ Idênticos: ${csame}</span>
-    </div>`;
+    <span class="badge"><span class="k">chave</span><span class="v">${esc(keyCol)}</span></span>
+    <span class="badge"><span class="k">total</span><span class="v">${rows.length} registros</span></span>
+  `;
 
-  $('resultsTitle').textContent = `🔍 Resultado da Comparação — ${rows.length} registros`;
+  $('resultsTitle').innerHTML =
+    `Resultado da Comparação <span class="count">— ${rows.length} registros</span>`;
 
+  /* ---- Build display columns: data cols with Δ cols interleaved after each delta col ---- */
   const displayCols = [];
   cols.forEach(c => {
     displayCols.push(c);
     if (deltaSet.has(c)) displayCols.push(`Δ ${c}`);
   });
-  displayCols.push('_status');
 
-  $('resultsTbl').innerHTML = buildTable(
-    displayCols.map(c => (c === '_status' ? 'Status' : c)),
-    rows.map(r => {
-      const out = {};
-      displayCols.forEach(c => { out[c === '_status' ? 'Status' : c] = r[c] ?? ''; });
-      return { ...out, _cls: r._cls };
-    }),
-    r => r._cls,
-  );
+  $('resultsTbl').innerHTML = renderCompareTable(displayCols, rows);
+
+  const crumbRes = $('crumbResult');
+  if (crumbRes) crumbRes.textContent = 'comparação';
 
   showResults();
+  updateStatusBar();
+}
+
+/* ============================================================
+   Render compare table: indicator column + data + Status column
+   ============================================================ */
+function renderCompareTable(displayCols, rows) {
+  let html = '<table><thead><tr>';
+  html += '<th class="indicator" aria-label="Categoria"></th>';
+  html += displayCols.map(c => `<th>${esc(c)}</th>`).join('');
+  html += '<th>Status</th>';
+  html += '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const meta = CAT_META[r._cls];
+    html += `<tr class="${r._cls}">`;
+    html += `<td class="indicator"><span class="mark ${meta.cls}" title="${esc(meta.label)}" aria-label="${esc(meta.label)}">${meta.glyph}</span></td>`;
+
+    displayCols.forEach(c => {
+      const val = r[c] ?? '';
+      if (r._diffs && r._diffs[c]) {
+        const [a, b] = r._diffs[c];
+        html += `<td><span class="diff-cell"><span class="old">${esc(a || '∅')}</span> <span class="arr">→</span> <span class="new">${esc(b || '∅')}</span></span></td>`;
+      } else {
+        html += `<td>${esc(val)}</td>`;
+      }
+    });
+
+    html += `<td>${esc(r._status)}</td>`;
+    html += '</tr>';
+  });
+
+  return html + '</tbody></table>';
 }
 
 function formatDelta(a, b) {

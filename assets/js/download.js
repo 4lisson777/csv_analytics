@@ -8,6 +8,7 @@ export function downloadResult() {
   const clean = state.resultRows.map(r => {
     const row = { ...r };
     delete row._cls;
+    delete row._diffs;
     if (isCompare) {
       row['Status'] = row._status ?? '';
     }
