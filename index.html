@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manipulador de Arquivos CSV</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --purple:  #667eea;
+      --purple2: #764ba2;
+      --green:   #48bb78;
+      --green2:  #38a169;
+      --orange:  #f6d365;
+      --orange2: #fda085;
+      --bg:      #f0f2f5;
+      --card:    #ffffff;
+      --border:  #e2e8f0;
+      --text:    #2d3748;
+      --muted:   #718096;
+      --radius:  12px;
+      --shadow:  0 2px 12px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      color: #fff;
+      padding: 2.25rem 2rem;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.18);
+    }
+    header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -.5px; }
+    header p  { margin-top: .5rem; opacity: .85; font-size: .95rem; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+    }
+
+    /* ── Upload grid ─────────────────────────────────── */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .drop-zone {
+      position: relative;
+      border: 2px dashed #c5c8d0;
+      border-radius: 10px;
+      padding: 2.25rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .25s, background .25s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--purple);
+      background: #f0f2ff;
+    }
+    .drop-zone.has-file {
+      border-color: var(--green);
+      background: #f0fff4;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .drop-icon { font-size: 2.4rem; margin-bottom: .6rem; }
+    .drop-hint { color: var(--muted); font-size: .875rem; line-height: 1.6; }
+    .drop-filename {
+      margin-top: .6rem;
+      color: var(--green2);
+      font-weight: 600;
+      font-size: .875rem;
+    }
+
+    /* ── Preview ─────────────────────────────────────── */
+    .preview-wrap { margin-top: 1.25rem; display: none; }
+    .preview-label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    /* ── Tables ─────────────────────────────────────── */
+    .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    thead { background: linear-gradient(135deg, var(--purple), var(--purple2)); color: #fff; }
+    thead th {
+      padding: .55rem .85rem;
+      text-align: left;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) { background: #f8f9ff; }
+    tbody td {
+      padding: .48rem .85rem;
+      border-bottom: 1px solid #eef0f5;
+      white-space: nowrap;
+    }
+
+    /* comparison row colours */
+    tr.only-file1  { background: #d4edda !important; }
+    tr.only-file2  { background: #cce5ff !important; }
+    tr.diff-values { background: #fff3cd !important; }
+    tr.identical   { background: #fff    !important; }
+
+    /* ── Controls ────────────────────────────────────── */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: .4rem; }
+    .form-group label { font-size: .82rem; font-weight: 700; color: #555; }
+
+    select {
+      padding: .6rem .9rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      font-size: .9rem;
+      color: var(--text);
+      background: #fff;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    select:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(102,126,234,.12);
+    }
+    select:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Buttons ─────────────────────────────────────── */
+    .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .72rem 1.6rem;
+      border: none;
+      border-radius: 8px;
+      font-size: .92rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+    }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-merge {
+      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      color: #fff;
+    }
+    .btn-merge:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 14px rgba(102,126,234,.38);
+    }
+    .btn-compare {
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+      color: #fff;
+    }
+    .btn-compare:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 14px rgba(253,160,133,.38);
+    }
+    .btn-download {
+      background: linear-gradient(135deg, var(--green), var(--green2));
+      color: #fff;
+    }
+    .btn-download:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 14px rgba(72,187,120,.38);
+    }
+
+    /* ── Results ─────────────────────────────────────── */
+    #resultsCard { display: none; }
+    #resultsCard.visible { display: block; }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+    }
+
+    /* Stats badges */
+    .stats-bar { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
+    .badge {
+      padding: .3rem .8rem;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .badge-green  { background: #d4edda; color: #155724; }
+    .badge-blue   { background: #cce5ff; color: #004085; }
+    .badge-yellow { background: #fff3cd; color: #856404; }
+    .badge-gray   { background: #e2e8f0; color: #4a5568; }
+
+    /* Legend */
+    .legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.1rem; }
+    .legend-item { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: #555; }
+    .legend-swatch {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 780px) {
+      .upload-grid    { grid-template-columns: 1fr; }
+      .controls-grid  { grid-template-columns: 1fr; }
+      header h1       { font-size: 1.4rem; }
+      .btn-row        { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Manipulador de Arquivos CSV</h1>
+  <p>Faça upload de dois arquivos CSV para mesclar ou comparar seus dados</p>
+</header>
+
+<div class="container">
+
+  <!-- ── Upload ─────────────────────────────────────── -->
+  <div class="upload-grid">
+
+    <!-- Arquivo 1 -->
+    <div class="card">
+      <div class="card-title">📄 Arquivo 1</div>
+      <div class="drop-zone" id="zone1">
+        <input type="file" id="input1" accept=".csv" />
+        <div class="drop-icon">📂</div>
+        <p class="drop-hint">Arraste e solte um arquivo <strong>.csv</strong> aqui<br>ou <strong>clique para selecionar</strong></p>
+        <p class="drop-filename" id="name1"></p>
+      </div>
+      <div class="preview-wrap" id="preview1">
+        <p class="preview-label">Prévia — primeiras 5 linhas</p>
+        <div class="tbl-wrap" id="prevTbl1"></div>
+      </div>
+    </div>
+
+    <!-- Arquivo 2 -->
+    <div class="card">
+      <div class="card-title">📄 Arquivo 2</div>
+      <div class="drop-zone" id="zone2">
+        <input type="file" id="input2" accept=".csv" />
+        <div class="drop-icon">📂</div>
+        <p class="drop-hint">Arraste e solte um arquivo <strong>.csv</strong> aqui<br>ou <strong>clique para selecionar</strong></p>
+        <p class="drop-filename" id="name2"></p>
+      </div>
+      <div class="preview-wrap" id="preview2">
+        <p class="preview-label">Prévia — primeiras 5 linhas</p>
+        <div class="tbl-wrap" id="prevTbl2"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Controls ───────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">⚙️ Configurações de Operação</div>
+    <div class="controls-grid">
+      <div class="form-group">
+        <label for="keyCol">Coluna-chave (usada na mesclagem e comparação)</label>
+        <select id="keyCol" disabled>
+          <option value="">— Faça upload dos dois arquivos primeiro —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sumCol">Coluna numérica (valores somados na mesclagem)</label>
+        <select id="sumCol" disabled>
+          <option value="">— Faça upload dos dois arquivos primeiro —</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-merge"   id="btnMerge"   disabled onclick="mergeCSVs()">🔀 Mesclar Arquivos</button>
+      <button class="btn btn-compare" id="btnCompare" disabled onclick="compareCSVs()">🔍 Comparar Arquivos</button>
+    </div>
+  </div>
+
+  <!-- ── Results ────────────────────────────────────── -->
+  <div class="card" id="resultsCard">
+    <div class="results-header">
+      <div class="card-title" id="resultsTitle" style="margin-bottom:0">Resultado</div>
+      <button class="btn btn-download" onclick="downloadResult()">⬇️ Baixar CSV</button>
+    </div>
+    <div id="legendSection"></div>
+    <div id="statsSection"></div>
+    <div class="tbl-wrap" id="resultsTbl"></div>
+  </div>
+
+</div>
+
+<script>
+  /* ─── State ──────────────────────────────────────── */
+  let data1 = null, data2 = null;
+  let resultRows = null, resultMode = null;
+
+  /* ─── Helpers ────────────────────────────────────── */
+  const $ = id => document.getElementById(id);
+
+  function esc(v) {
+    return String(v ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fields(data) { return data?.length ? Object.keys(data[0]) : []; }
+
+  function buildTable(headers, rows, rowClass) {
+    let h = '<table><thead><tr>' + headers.map(c => `<th>${esc(c)}</th>`).join('') + '</tr></thead><tbody>';
+    rows.forEach(r => {
+      const cls = rowClass ? rowClass(r) : '';
+      h += `<tr${cls ? ` class="${cls}"` : ''}>` + headers.map(c => `<td>${esc(r[c])}</td>`).join('') + '</tr>';
+    });
+    return h + '</tbody></table>';
+  }
+
+  function allFields(d1, d2) {
+    return [...new Set([...fields(d1), ...fields(d2)])];
+  }
+
+  /* ─── Drop-zone setup ────────────────────────────── */
+  function setupZone(zoneId, inputId, num) {
+    const zone  = $(zoneId);
+    const input = $(inputId);
+
+    zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) loadFile(f, num);
+      else alert('Arquivo inválido.');
+    });
+    input.addEventListener('change', e => {
+      if (e.target.files[0]) loadFile(e.target.files[0], num);
+    });
+  }
+
+  function loadFile(file, num) {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      alert('Por favor, selecione um arquivo .csv válido.');
+      return;
+    }
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete({ data, meta }) {
+        if (num === 1) data1 = data; else data2 = data;
+        markZone(num, file.name);
+        showPreview(num, data, meta.fields ?? fields(data));
+        refreshControls();
+      },
+      error(err) { alert(`Erro ao ler arquivo ${num}: ${err.message}`); }
+    });
+  }
+
+  function markZone(num, filename) {
+    $(`zone${num}`).classList.add('has-file');
+    $(`name${num}`).textContent = `✓ ${filename}`;
+  }
+
+  function showPreview(num, data, cols) {
+    $(`prevTbl${num}`).innerHTML = buildTable(cols, data.slice(0, 5));
+    $(`preview${num}`).style.display = 'block';
+  }
+
+  /* ─── Controls ───────────────────────────────────── */
+  function refreshControls() {
+    if (!data1 || !data2) return;
+
+    const cols = allFields(data1, data2);
+
+    const autoKey = cols.find(c => /id|cod|sku|code/i.test(c)) ?? cols[0];
+    const autoSum = cols.find(c => /qty|quant|total|valor|amount|price|preco/i.test(c));
+
+    function fillSelect(selId, defaultVal) {
+      const sel = $(selId);
+      sel.innerHTML = cols.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      if (defaultVal) sel.value = defaultVal;
+      sel.disabled = false;
+    }
+
+    fillSelect('keyCol', autoKey);
+    fillSelect('sumCol', autoSum ?? '');
+
+    $('btnMerge').disabled   = false;
+    $('btnCompare').disabled = false;
+  }
+
+  /* ─── Merge ──────────────────────────────────────── */
+  function mergeCSVs() {
+    const keyCol = $('keyCol').value;
+    const sumCol = $('sumCol').value;
+
+    if (!keyCol) { alert('Selecione a coluna-chave.'); return; }
+    if (!sumCol) { alert('Selecione a coluna numérica para soma.'); return; }
+
+    const map = new Map();
+    data1.forEach(r => map.set(String(r[keyCol] ?? ''), { ...r }));
+
+    data2.forEach(r => {
+      const k = String(r[keyCol] ?? '');
+      if (map.has(k)) {
+        const base = map.get(k);
+        base[sumCol] = (parseFloat(base[sumCol]) || 0) + (parseFloat(r[sumCol]) || 0);
+      } else {
+        map.set(k, { ...r });
+      }
+    });
+
+    const cols = allFields(data1, data2);
+    resultRows = Array.from(map.values());
+    resultMode = 'merge';
+
+    $('legendSection').innerHTML = '';
+    $('statsSection').innerHTML = `
+      <div class="stats-bar">
+        <span class="badge badge-gray">📋 Total: ${resultRows.length} registros</span>
+        <span class="badge badge-gray">🔑 Chave: ${esc(keyCol)}</span>
+        <span class="badge badge-gray">➕ Soma: ${esc(sumCol)}</span>
+      </div>`;
+
+    $('resultsTitle').textContent = `🔀 Resultado da Mesclagem — ${resultRows.length} registros`;
+    $('resultsTbl').innerHTML = buildTable(cols, resultRows);
+    showResults();
+  }
+
+  /* ─── Compare ────────────────────────────────────── */
+  function compareCSVs() {
+    const keyCol = $('keyCol').value;
+    const sumCol = $('sumCol').value;
+
+    if (!keyCol) { alert('Selecione a coluna-chave.'); return; }
+
+    const map1 = new Map(data1.map(r => [String(r[keyCol] ?? ''), r]));
+    const map2 = new Map(data2.map(r => [String(r[keyCol] ?? ''), r]));
+    const allKeys = new Set([...map1.keys(), ...map2.keys()]);
+
+    const cols = allFields(data1, data2);
+
+    let c1 = 0, c2 = 0, cdiff = 0, csame = 0;
+    const rows = [];
+
+    allKeys.forEach(key => {
+      const r1 = map1.get(key);
+      const r2 = map2.get(key);
+
+      if (r1 && !r2) {
+        rows.push({ _cls: 'only-file1', _status: 'Apenas Arquivo 1', ...r1 }); c1++;
+      } else if (!r1 && r2) {
+        rows.push({ _cls: 'only-file2', _status: 'Apenas Arquivo 2', ...r2 }); c2++;
+      } else {
+        const identical = cols.every(c => String(r1[c] ?? '') === String(r2[c] ?? ''));
+        if (identical) {
+          rows.push({ _cls: 'identical', _status: 'Idêntico', ...r1 }); csame++;
+        } else {
+          /* Show "val1 → val2" for changed cells */
+          const merged = { _cls: 'diff-values', _status: 'Diferente' };
+          cols.forEach(c => {
+            const v1 = String(r1[c] ?? ''), v2 = String(r2[c] ?? '');
+            merged[c] = v1 === v2 ? v1 : `${v1} → ${v2}`;
+          });
+          rows.push(merged); cdiff++;
+        }
+      }
+    });
+
+    /* Sort: only1, only2, diff, same */
+    const order = { 'only-file1': 0, 'only-file2': 1, 'diff-values': 2, 'identical': 3 };
+    rows.sort((a, b) => order[a._cls] - order[b._cls]);
+
+    resultRows = rows;
+    resultMode = 'compare';
+
+    $('legendSection').innerHTML = `
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#d4edda;border:1px solid #c3e6cb"></div>Apenas no Arquivo 1</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#cce5ff;border:1px solid #b8daff"></div>Apenas no Arquivo 2</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#fff3cd;border:1px solid #ffeeba"></div>Valores diferentes</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#fff;border:1px solid #ddd"></div>Idênticos</div>
+      </div>`;
+
+    $('statsSection').innerHTML = `
+      <div class="stats-bar">
+        <span class="badge badge-green">🟢 Apenas Arq. 1: ${c1}</span>
+        <span class="badge badge-blue">🔵 Apenas Arq. 2: ${c2}</span>
+        <span class="badge badge-yellow">🟡 Diferentes: ${cdiff}</span>
+        <span class="badge badge-gray">⚪ Idênticos: ${csame}</span>
+      </div>`;
+
+    $('resultsTitle').textContent = `🔍 Resultado da Comparação — ${rows.length} registros`;
+
+    const displayCols = [...cols, '_status'];
+    $('resultsTbl').innerHTML = buildTable(
+      displayCols.map(c => c === '_status' ? 'Status' : c),
+      rows.map(r => {
+        const out = {};
+        displayCols.forEach(c => { out[c === '_status' ? 'Status' : c] = r[c] ?? ''; });
+        return { ...out, _cls: r._cls };
+      }),
+      r => r._cls
+    );
+
+    showResults();
+  }
+
+  function showResults() {
+    const card = $('resultsCard');
+    card.classList.add('visible');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ─── Download ───────────────────────────────────── */
+  function downloadResult() {
+    if (!resultRows) return;
+    const clean = resultRows.map(r => {
+      const o = { ...r };
+      delete o._cls;
+      delete o._status;
+      return o;
+    });
+    const csv  = Papa.unparse(clean);
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = resultMode === 'merge' ? 'resultado_mesclagem.csv' : 'resultado_comparacao.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ─── Init ───────────────────────────────────────── */
+  setupZone('zone1', 'input1', 1);
+  setupZone('zone2', 'input2', 2);
+</script>
+
+</body>
+</html>
