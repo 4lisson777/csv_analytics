@@ -3,9 +3,14 @@ import { state } from './state.js';
 export function downloadResult() {
   if (!state.resultRows) return;
 
+  const isCompare = state.resultMode === 'compare';
+
   const clean = state.resultRows.map(r => {
     const row = { ...r };
     delete row._cls;
+    if (isCompare) {
+      row['Status'] = row._status ?? '';
+    }
     delete row._status;
     return row;
   });

@@ -1,0 +1,17 @@
+{
+  "name": "csv_analytics",
+  "version": "1.0.0",
+  "description": "Compare and merge CSV files",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:39463/git/4lisson777/csv_analytics"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
