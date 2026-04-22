@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manipulador de Arquivos CSV</title>
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <!-- Apply theme before first paint to prevent flash -->
+  <script>(function(){var s=localStorage.getItem('csv-tool-theme');document.documentElement.dataset.theme=s||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');})()</script>
   <script src="assets/js/vendor/papaparse.js"></script>
 </head>
 <body>
@@ -21,6 +23,10 @@
       <span class="sub">Faça upload de dois arquivos CSV para mesclar ou comparar</span>
     </div>
     <div class="spacer"></div>
+    <button class="theme-toggle" id="btnTheme" aria-label="Alternar modo escuro" title="Alternar modo escuro">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+    </button>
     <div class="crumbs" id="crumbs">
       <b id="crumb1">—</b> · arquivo&nbsp;1
       <span class="sep">/</span>

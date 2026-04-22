@@ -1,9 +1,11 @@
-import { setupZone }     from './upload.js';
-import { mergeCSVs }    from './merge.js';
-import { compareCSVs }  from './compare.js';
+import { setupZone }      from './upload.js';
+import { mergeCSVs }     from './merge.js';
+import { compareCSVs }   from './compare.js';
 import { downloadResult } from './download.js';
-import { $ }            from './utils.js';
+import { setupTheme }    from './theme.js';
+import { $ }             from './utils.js';
 
+setupTheme();
 setupZone('zone1', 'input1', 1);
 setupZone('zone2', 'input2', 2);
 
