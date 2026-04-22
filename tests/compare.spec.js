@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('playwright/test');
+const { test, expect } = require('@playwright/test');
 const { compareFiles, getColumnValues, getRowClasses } = require('./helpers');
 
 // Expected compare outcome for file1.csv vs file2.csv (key=product_id):

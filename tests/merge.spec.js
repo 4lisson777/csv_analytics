@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('playwright/test');
+const { test, expect } = require('@playwright/test');
 const { mergeFiles, getColumnValues } = require('./helpers');
 
 // Expected merge outcome for file1.csv + file2.csv (key=product_id, sum=total_quantity):
