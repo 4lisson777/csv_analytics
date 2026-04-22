@@ -1,11 +1,12 @@
 import { state } from './state.js';
 import { $, allFields, esc, buildTable, showResults } from './utils.js';
+import { updateStatusBar } from './upload.js';
 
 export function mergeCSVs() {
   const keyCol = $('keyCol').value;
   const sumCol = $('sumCol').value;
 
-  if (!keyCol) { alert('Selecione a coluna-chave.');            return; }
+  if (!keyCol) { alert('Selecione a coluna-chave.');              return; }
   if (!sumCol) { alert('Selecione a coluna numérica para soma.'); return; }
 
   const map = new Map();
@@ -27,13 +28,19 @@ export function mergeCSVs() {
 
   $('legendSection').innerHTML = '';
   $('statsSection').innerHTML = `
-    <div class="stats-bar">
-      <span class="badge badge-gray">📋 Total: ${state.resultRows.length} registros</span>
-      <span class="badge badge-gray">🔑 Chave: ${esc(keyCol)}</span>
-      <span class="badge badge-gray">➕ Soma: ${esc(sumCol)}</span>
-    </div>`;
+    <span class="badge badge-gray"><span class="k">total</span><span class="v">${state.resultRows.length} registros</span></span>
+    <span class="badge badge-gray"><span class="k">chave</span><span class="v">${esc(keyCol)}</span></span>
+    <span class="badge badge-gray"><span class="k">soma</span><span class="v">${esc(sumCol)}</span></span>
+  `;
 
-  $('resultsTitle').textContent = `🔀 Resultado da Mesclagem — ${state.resultRows.length} registros`;
+  $('resultsTitle').innerHTML =
+    `Resultado da Mesclagem <span class="count">— ${state.resultRows.length} registros</span>`;
+
   $('resultsTbl').innerHTML = buildTable(cols, state.resultRows);
+
+  const crumbRes = $('crumbResult');
+  if (crumbRes) crumbRes.textContent = 'mesclagem';
+
   showResults();
+  updateStatusBar();
 }
