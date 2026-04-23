@@ -1,6 +1,6 @@
 import { state } from './state.js';
-import { $, allFields, esc, showResults } from './utils.js';
-import { getSumCols } from './controls.js';
+import { $, esc, showResults } from './utils.js';
+import { getSumCols, getColumnMappings } from './controls.js';
 import { updateStatusBar } from './upload.js';
 
 const CAT_META = {
@@ -11,59 +11,70 @@ const CAT_META = {
 };
 
 export function compareCSVs() {
-  const keyCol    = $('keyCol').value;
-  const deltaCols = getSumCols();
+  const keyCol   = $('keyCol').value;
+  const mappings = getColumnMappings();
+  const deltaSet = new Set(getSumCols());
+
   if (!keyCol) { alert('Selecione a coluna-chave.'); return; }
+  if (mappings.length === 0) { alert('Adicione ao menos um mapeamento de colunas.'); return; }
 
   const map1    = new Map(state.data1.map(r => [String(r[keyCol] ?? ''), r]));
   const map2    = new Map(state.data2.map(r => [String(r[keyCol] ?? ''), r]));
   const allKeys = new Set([...map1.keys(), ...map2.keys()]);
-  const cols    = allFields(state.data1, state.data2);
 
-  const deltaSet = new Set(deltaCols);
-  const counts   = { 'only-file1': 0, 'only-file2': 0, 'diff-values': 0, 'identical': 0 };
-  const rows     = [];
-
-  const addDeltas = (row, r1, r2) => {
-    deltaCols.forEach(dc => {
-      row[`Δ ${dc}`] = (r1 && r2) ? formatDelta(r1[dc], r2[dc]) : '';
-    });
-  };
+  const counts = { 'only-file1': 0, 'only-file2': 0, 'diff-values': 0, 'identical': 0 };
+  const rows   = [];
 
   allKeys.forEach(key => {
     const r1 = map1.get(key);
     const r2 = map2.get(key);
 
     if (r1 && !r2) {
-      const row = { _cls: 'only-file1', _status: 'Apenas Arquivo 1', ...r1 };
-      addDeltas(row, r1, null);
+      const row = { _cls: 'only-file1', _status: 'Apenas Arquivo 1', [keyCol]: key };
+      mappings.forEach(({ col1 }) => {
+        row[col1] = r1[col1] ?? '';
+        if (deltaSet.has(col1)) row[`Δ ${col1}`] = '';
+      });
       rows.push(row);
       counts['only-file1']++;
+
     } else if (!r1 && r2) {
-      const row = { _cls: 'only-file2', _status: 'Apenas Arquivo 2', ...r2 };
-      addDeltas(row, null, r2);
+      const row = { _cls: 'only-file2', _status: 'Apenas Arquivo 2', [keyCol]: key };
+      mappings.forEach(({ col1, col2 }) => {
+        row[col1] = r2[col2] ?? '';
+        if (deltaSet.has(col1)) row[`Δ ${col1}`] = '';
+      });
       rows.push(row);
       counts['only-file2']++;
+
     } else {
-      const identical = cols.every(c => String(r1[c] ?? '') === String(r2[c] ?? ''));
+      const identical = mappings.every(({ col1, col2 }) =>
+        String(r1[col1] ?? '') === String(r2[col2] ?? '')
+      );
+
       if (identical) {
-        const row = { _cls: 'identical', _status: 'Idêntico', ...r1 };
-        addDeltas(row, r1, r2);
+        const row = { _cls: 'identical', _status: 'Idêntico', [keyCol]: key };
+        mappings.forEach(({ col1, col2 }) => {
+          row[col1] = r1[col1] ?? '';
+          if (deltaSet.has(col1)) row[`Δ ${col1}`] = formatDelta(r1[col1], r2[col2]);
+        });
         rows.push(row);
         counts['identical']++;
+
       } else {
-        const merged = { _cls: 'diff-values', _status: 'Diferente', _diffs: {} };
-        cols.forEach(c => {
-          const v1 = String(r1[c] ?? ''), v2 = String(r2[c] ?? '');
+        const row = { _cls: 'diff-values', _status: 'Diferente', _diffs: {}, [keyCol]: key };
+        mappings.forEach(({ col1, col2 }) => {
+          const v1 = String(r1[col1] ?? '');
+          const v2 = String(r2[col2] ?? '');
           if (v1 === v2) {
-            merged[c] = v1;
+            row[col1] = v1;
           } else {
-            merged[c] = `${v1} → ${v2}`;
-            merged._diffs[c] = [v1, v2];
+            row[col1] = `${v1} → ${v2}`;
+            row._diffs[col1] = [v1, v2];
           }
+          if (deltaSet.has(col1)) row[`Δ ${col1}`] = formatDelta(r1[col1], r2[col2]);
         });
-        addDeltas(merged, r1, r2);
-        rows.push(merged);
+        rows.push(row);
         counts['diff-values']++;
       }
     }
@@ -75,7 +86,6 @@ export function compareCSVs() {
   state.resultRows = rows;
   state.resultMode = 'compare';
 
-  /* ---- Legend with category glyphs + badge counts ---- */
   $('legendSection').innerHTML = `
     <div class="legend">
       ${['only-file1', 'only-file2', 'diff-values', 'identical'].map(cat => {
@@ -91,20 +101,23 @@ export function compareCSVs() {
     </div>
   `;
 
-  /* ---- Stats: key column + totals ---- */
+  const mappingLabels = mappings.map(({ col1, col2 }) =>
+    col1 === col2 ? esc(col1) : `${esc(col1)} → ${esc(col2)}`
+  ).join(', ');
+
   $('statsSection').innerHTML = `
     <span class="badge"><span class="k">chave</span><span class="v">${esc(keyCol)}</span></span>
+    <span class="badge"><span class="k">colunas</span><span class="v">${mappingLabels}</span></span>
     <span class="badge"><span class="k">total</span><span class="v">${rows.length} registros</span></span>
   `;
 
   $('resultsTitle').innerHTML =
     `Resultado da Comparação <span class="count">— ${rows.length} registros</span>`;
 
-  /* ---- Build display columns: data cols with Δ cols interleaved after each delta col ---- */
-  const displayCols = [];
-  cols.forEach(c => {
-    displayCols.push(c);
-    if (deltaSet.has(c)) displayCols.push(`Δ ${c}`);
+  const displayCols = [keyCol];
+  mappings.forEach(({ col1 }) => {
+    displayCols.push(col1);
+    if (deltaSet.has(col1)) displayCols.push(`Δ ${col1}`);
   });
 
   $('resultsTbl').innerHTML = renderCompareTable(displayCols, rows);
@@ -116,9 +129,6 @@ export function compareCSVs() {
   updateStatusBar();
 }
 
-/* ============================================================
-   Render compare table: indicator column + data + Status column
-   ============================================================ */
 function renderCompareTable(displayCols, rows) {
   let html = '<table><thead><tr>';
   html += '<th class="indicator" aria-label="Categoria"></th>';

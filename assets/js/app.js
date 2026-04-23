@@ -1,13 +1,15 @@
-import { setupZone }      from './upload.js';
-import { mergeCSVs }     from './merge.js';
-import { compareCSVs }   from './compare.js';
-import { downloadResult } from './download.js';
-import { setupTheme }    from './theme.js';
-import { $ }             from './utils.js';
+import { setupZone }        from './upload.js';
+import { mergeCSVs }        from './merge.js';
+import { compareCSVs }      from './compare.js';
+import { downloadResult }   from './download.js';
+import { setupTheme }       from './theme.js';
+import { initMappingButton } from './controls.js';
+import { $ }                from './utils.js';
 
 setupTheme();
 setupZone('zone1', 'input1', 1);
 setupZone('zone2', 'input2', 2);
+initMappingButton();
 
 $('btnMerge').addEventListener('click',    mergeCSVs);
 $('btnCompare').addEventListener('click',  compareCSVs);

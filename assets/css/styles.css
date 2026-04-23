@@ -651,6 +651,60 @@ body {
   accent-color: var(--accent);
 }
 
+/* ---------- Column mapping rows ---------- */
+.mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mapping-row .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.mapping-arrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+.btn-remove-mapping {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-xs);
+  background: var(--bg-3);
+  color: var(--fg-3);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.btn-remove-mapping:hover { background: var(--accent-faint); color: var(--accent); }
+.btn-add-mapping {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.btn-add-mapping:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ---------- Action buttons ---------- */
 .op-actions { display: flex; gap: 8px; }
 

@@ -125,6 +125,14 @@
         <span class="hint">— Faça upload dos dois arquivos primeiro —</span>
       </div>
     </div>
+    <div class="field col-mapping-field" id="colMappingField" style="display:none; grid-column: 1 / -1;">
+      <label>
+        Mapeamento de colunas
+        <span class="hint">(comparação — arquivo&nbsp;1 → arquivo&nbsp;2)</span>
+      </label>
+      <div id="colMappings" class="mapping-list"></div>
+      <button class="btn-add-mapping" id="btnAddMapping" type="button">+ Adicionar par</button>
+    </div>
     <div class="op-actions">
       <button class="btn btn-secondary" id="btnCompare" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M12 3v18"/></svg>
